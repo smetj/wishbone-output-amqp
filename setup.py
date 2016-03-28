@@ -27,7 +27,7 @@ from setuptools.command.test import test as TestCommand
 import sys
 
 PROJECT = 'wishbone_output_amqp'
-VERSION = '0.1.0'
+VERSION = '1.0.0'
 
 install_requires = [
     'wishbone>=2.1.1',
@@ -35,7 +35,7 @@ install_requires = [
 ]
 
 try:
-    with open('README.md', 'rt') as f:
+    with open('README.rst', 'rt') as f:
         long_description = f.read()
 except IOError:
     long_description = ''
@@ -87,7 +87,7 @@ setup(
     zip_safe=False,
     entry_points={
         'wishbone.output': [
-            'amqp = wishbone_input_amqp:AMQPIn'
+            'amqp = wishbone_output_amqp:AMQPOut'
         ]
     }
 )
