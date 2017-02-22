@@ -31,7 +31,7 @@ VERSION = '1.0.0'
 
 install_requires = [
     'wishbone>=2.1.1',
-    'amqp==1.4.9',
+    'amqp>=2.0.0',
 ]
 
 try:
