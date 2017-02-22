@@ -164,6 +164,7 @@ class AMQPOut(Actor):
                                     userid=self.kwargs.user,
                                     password=self.kwargs.password
                                     )
+                self.connection.connect()
                 self.channel = self.connection.channel()
 
                 if self.kwargs.exchange != "":
