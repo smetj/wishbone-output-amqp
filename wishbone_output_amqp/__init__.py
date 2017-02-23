@@ -22,4 +22,4 @@
 #
 #
 
-from amqpout import AMQPOut
+from .amqpout import AMQPOut
