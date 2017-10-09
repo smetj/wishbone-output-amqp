@@ -22,13 +22,18 @@
 #
 #
 
-from gevent import monkey
-monkey.patch_socket()
+
+from nucleon.amqp.connection import Connection
 from wishbone import Actor
-from amqp.connection import Connection as amqp_connection
-from amqp import basic_message
-from gevent import sleep
 from wishbone.event import Bulk
+from gevent import sleep
+from gevent.event import Event
+from gevent.hub import Hub
+
+
+def print_exception(*args, **kwargs):
+    pass
+
 
 class AMQPOut(Actor):
 
@@ -111,6 +116,9 @@ class AMQPOut(Actor):
         - delivery_mode(int)(1)
            |  Sets the delivery mode of the messages.
 
+        - heartbeat(int)(30)
+           |  Sets the heartbeat interval.
+
 
     Queues:
 
@@ -124,17 +132,22 @@ class AMQPOut(Actor):
                  exchange_arguments={},
                  queue="wishbone", queue_durable=False, queue_exclusive=False, queue_auto_delete=True, queue_declare=True,
                  queue_arguments={},
-                 routing_key="", delivery_mode=1):
+                 routing_key="", delivery_mode=1, heartbeat=30):
 
         Actor.__init__(self, actor_config)
 
         self.pool.createQueue("inbox")
         self.registerConsumer(self.consume, "inbox")
 
+        self.go_connect = Event()
+        self.go_connect.set()
+        Hub.print_exception = print_exception
+
     def preHook(self):
         self._queue_arguments = dict(self.kwargs.queue_arguments)
         self._exchange_arguments = dict(self.kwargs.exchange_arguments)
-        self.sendToBackground(self.setupConnectivity)
+        self.setupInitialConnection()
+        self.sendToBackground(self.setupConnectivityLoop)
 
     def consume(self, event):
 
@@ -143,68 +156,90 @@ class AMQPOut(Actor):
         else:
             data = str(event.get(self.kwargs.selection))
 
-        message = basic_message.Message(
-                    body=data,
-                    delivery_mode=self.kwargs.delivery_mode
-                    )
+        try:
+            self.channel.basic_publish(
+                exchange=self.kwargs.exchange,
+                routing_key=self.kwargs.routing_key,
+                body=data,
+                mandatory=False
+            )
+        except Exception as err:
+            self.go_connect.set()
+            raise
 
-        self.channel.basic_publish(message,
-                                   exchange=self.kwargs.exchange,
-                                   routing_key=self.kwargs.routing_key)
-        sleep(0)
-
-    def setupConnectivity(self):
+    def setupInitialConnection(self):
 
         while self.loop():
             try:
-                self.connection = amqp_connection(
-                                    host=self.kwargs.host,
-                                    port=self.kwargs.port,
-                                    virtual_host=self.kwargs.vhost,
-                                    userid=self.kwargs.user,
-                                    password=self.kwargs.password
-                                    )
-                self.connection.connect()
-                self.channel = self.connection.channel()
-
-                if self.kwargs.exchange != "":
-                    self.channel.exchange_declare(
-                        self.kwargs.exchange,
-                        self.kwargs.exchange_type,
-                        durable=self.kwargs.exchange_durable,
-                        auto_delete=self.kwargs.exchange_auto_delete,
-                        passive=self.kwargs.exchange_passive,
-                        arguments=self._exchange_arguments
-                    )
-                    self.logging.debug("Declared exchange %s." % (self.kwargs.exchange))
-
-                if self.kwargs.queue_declare:
-                    self.channel.queue_declare(
-                        self.kwargs.queue,
-                        durable=self.kwargs.queue_durable,
-                        exclusive=self.kwargs.queue_exclusive,
-                        auto_delete=self.kwargs.queue_auto_delete,
-                        arguments=self._queue_arguments
-                    )
-                    self.logging.debug("Declared queue %s." % (self.kwargs.queue))
-
-                if self.kwargs.exchange != "":
-                    self.channel.queue_bind(
-                        self.kwargs.queue,
-                        self.kwargs.exchange,
-                        routing_key=self.kwargs.routing_key
-                    )
-                    self.logging.debug("Bound queue %s to exchange %s." % (self.kwargs.queue, self.kwargs.exchange))
-
-                self.logging.info("Connected to broker.")
+                self.setupConnection()
             except Exception as err:
                 self.logging.error("Failed to connect to broker.  Reason %s " % (err))
                 sleep(1)
             else:
                 break
 
+    def setupConnectivityLoop(self):
+
+        while self.loop():
+            self.go_connect.wait()
+            try:
+                self.setupConnection()
+            except Exception as err:
+                self.logging.error("Failed to connect to broker.  Reason %s " % (err))
+                sleep(1)
+            else:
+                self.go_connect.clear()
+
+    def setupConnection(self):
+
+        url = "amqp://%s:%s@%s:%s%s" % (
+            self.kwargs.user,
+            self.kwargs.password,
+            self.kwargs.host,
+            self.kwargs.port,
+            self.kwargs.vhost,
+        )
+
+        self.connection = Connection(
+            amqp_url=url,
+            heartbeat=self.kwargs.heartbeat
+        )
+
+        self.connection.connect()
+        self.channel = self.connection.allocate_channel()
+        self.channel.confirm_select()
+
+        if self.kwargs.exchange != "":
+            self.channel.exchange_declare(
+                self.kwargs.exchange,
+                self.kwargs.exchange_type,
+                durable=self.kwargs.exchange_durable,
+                auto_delete=self.kwargs.exchange_auto_delete,
+                passive=self.kwargs.exchange_passive,
+                arguments=self._exchange_arguments
+            )
+            self.logging.debug("Declared exchange %s." % (self.kwargs.exchange))
+
+        if self.kwargs.queue_declare:
+            self.channel.queue_declare(
+                self.kwargs.queue,
+                durable=self.kwargs.queue_durable,
+                exclusive=self.kwargs.queue_exclusive,
+                auto_delete=self.kwargs.queue_auto_delete,
+                arguments=self._queue_arguments
+            )
+            self.logging.debug("Declared queue %s." % (self.kwargs.queue))
+
+        if self.kwargs.exchange != "":
+            self.channel.queue_bind(
+                self.kwargs.queue,
+                self.kwargs.exchange,
+                routing_key=self.kwargs.routing_key
+            )
+            self.logging.debug("Bound queue %s to exchange %s." % (self.kwargs.queue, self.kwargs.exchange))
+
+        self.logging.info("Connected to broker.")
+
     def postHook(self):
-        try:
-            self.connection.close()
-        except:
-            pass
+        self.channel.close()
+        self.connection.close()
