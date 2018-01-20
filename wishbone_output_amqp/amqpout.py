@@ -24,15 +24,17 @@
 
 from gevent import monkey
 monkey.patch_socket()
-from wishbone import Actor
-from amqp.connection import Connection as amqp_connection
+from wishbone.module import OutputModule
+from amqp.connection import Connection
 from amqp import basic_message
 from gevent import sleep
-from wishbone.event import Bulk
+from wishbone.event import extractBulkItemValues
+from gevent.event import Event
 
-class AMQPOut(Actor):
 
-    '''**Produces messages to AMQP.**
+class AMQPOut(OutputModule):
+    '''
+    Submits messages to AMQP.
 
     Submits messages to an AMQP message broker.
 
@@ -46,9 +48,13 @@ class AMQPOut(Actor):
 
     Parameters:
 
-        - selection(str)("@data")
+        - selection(str)("data")
            |  The part of the event to submit externally.
            |  Use an empty string to refer to the complete event.
+
+        - payload(str)(None)
+           |  The string to submit.
+           |  If defined takes precedence over `selection`.
 
         - host(str)("localhost")
            |  The host broker to connect to.
@@ -118,18 +124,27 @@ class AMQPOut(Actor):
            | Messages going to the defined broker.
     '''
 
-    def __init__(self, actor_config, selection="@data",
+    def __init__(self, actor_config, selection="data", payload=None,
                  host="localhost", port=5672, vhost="/", user="guest", password="guest",
-                 exchange="", exchange_type="direct", exchange_durable=False, exchange_auto_delete=True, exchange_passive=False,
+                 exchange="wishbone", exchange_type="direct", exchange_durable=False, exchange_auto_delete=True, exchange_passive=False,
                  exchange_arguments={},
                  queue="wishbone", queue_durable=False, queue_exclusive=False, queue_auto_delete=True, queue_declare=True,
                  queue_arguments={},
                  routing_key="", delivery_mode=1):
 
-        Actor.__init__(self, actor_config)
+        OutputModule.__init__(self, actor_config)
+        self.setEncoder("wishbone.protocol.encode.dummy")
 
         self.pool.createQueue("inbox")
         self.registerConsumer(self.consume, "inbox")
+
+        self.connect = Event()
+        self.connect.set()
+
+        self.do_consume = Event()
+        self.do_consume.clear()
+
+        self.channel = None
 
     def preHook(self):
         self._queue_arguments = dict(self.kwargs.queue_arguments)
@@ -138,32 +153,48 @@ class AMQPOut(Actor):
 
     def consume(self, event):
 
-        if isinstance(event, Bulk):
-            data = event.dumpFieldAsString(self.kwargs.selection)
+        self.do_consume.wait()
+        if self.channel is None:
+            self.logging.error("Failed to submit message. Initial connection not established yet.")
         else:
-            data = str(event.get(self.kwargs.selection))
-
-        message = basic_message.Message(
-                    body=data,
-                    delivery_mode=self.kwargs.delivery_mode
+            if event.kwargs.payload is None:
+                if event.isBulk():
+                    data = "\n".join([str(item) for item in extractBulkItemValues(event, self.kwargs.selection)])
+                else:
+                    data = event.get(
+                        event.kwargs.selection
                     )
+            else:
+                data = event.kwargs.payload
 
-        self.channel.basic_publish(message,
-                                   exchange=self.kwargs.exchange,
-                                   routing_key=self.kwargs.routing_key)
-        sleep(0)
+            message = basic_message.Message(
+                body=data,
+                delivery_mode=self.kwargs.delivery_mode
+            )
+
+            try:
+                self.channel.basic_publish(
+                    message,
+                    exchange=self.kwargs.exchange,
+                    routing_key=self.kwargs.routing_key
+                )
+            except Exception as err:
+                self.logging.error("Failed to submit event to broker. Reason: %s" % (err))
+                self.connect.set()
 
     def setupConnectivity(self):
 
         while self.loop():
+            self.connect.wait()
+            self.logging.debug("Connecting to %s" % (self.kwargs.host))
             try:
-                self.connection = amqp_connection(
-                                    host=self.kwargs.host,
-                                    port=self.kwargs.port,
-                                    virtual_host=self.kwargs.vhost,
-                                    userid=self.kwargs.user,
-                                    password=self.kwargs.password
-                                    )
+                self.connection = Connection(
+                    host=self.kwargs.host,
+                    port=self.kwargs.port,
+                    virtual_host=self.kwargs.vhost,
+                    userid=self.kwargs.user,
+                    password=self.kwargs.password
+                )
                 self.connection.connect()
                 self.channel = self.connection.channel()
 
@@ -196,15 +227,20 @@ class AMQPOut(Actor):
                     )
                     self.logging.debug("Bound queue %s to exchange %s." % (self.kwargs.queue, self.kwargs.exchange))
 
-                self.logging.info("Connected to broker.")
+                self.logging.info("Connected to broker %s." % (self.kwargs.host))
             except Exception as err:
                 self.logging.error("Failed to connect to broker.  Reason %s " % (err))
                 sleep(1)
             else:
-                break
+                self.do_consume.set()
+                self.connect.clear()
 
     def postHook(self):
         try:
+            self.channel.close()
+        except Exception as err:
+            del(err)
+        try:
             self.connection.close()
-        except:
-            pass
+        except Exception as err:
+            del(err)
