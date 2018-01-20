@@ -6,26 +6,42 @@
                                        version 3.0.0
 
 
-    ==================================
-    wishbone_contrib.module.input.amqp
-    ==================================
+    ===================================
+    wishbone_contrib.module.output.amqp
+    ===================================
 
     Version: 3.0.0
 
-    Consumes messages from AMQP.
-    ----------------------------
-    **Consumes messages from AMQP.**
+    Submits messages to an AMQP service.
+    ------------------------------------
 
-        Consumes messages from an AMQP message broker.
-        The declared <exchange> and <queue> will be bound to each other.
+        Submits messages to an AMQP service.
+
+        Submits messages to an AMQP message broker.
+
+        If <exchange> is not provided, no exchange will be created during initialisation.
+        If <queue> is not provided, queue will be created during initialisation
+
+        If <exchange> and <queue> are provided, they will both be created and
+        bound during initialisation.
+
+        <exchange> and <queue> can be event lookup values.
 
         Parameters:
 
+            - selection(str)("data")
+               |  The part of the event to submit externally.
+               |  Use an empty string to refer to the complete event.
+
+            - payload(str)(None)
+               |  The string to submit.
+               |  If defined takes precedence over `selection`.
+
             - host(str)("localhost")
-               | The host to connect to.
+               |  The host broker to connect to.
 
             - port(int)(5672)
-               | The port to connect to.
+               |  The port to connect to.
 
             - vhost(str)("/")
                |  The virtual host to connect to.
@@ -56,7 +72,10 @@
                |  Additional arguments for exchange declaration.
 
             - queue(str)("wishbone")
-               |  The queue to declare and ultimately consume.
+               |  The queue to declare and bind to <exchange>. This will also the
+               |  the destination queue of the submitted messages unless
+               |  <routing_key> is set to another value and <exchange_type> is
+               |  "topic".
 
             - queue_durable(bool)(false)
                |  Declare a durable queue.
@@ -74,25 +93,14 @@
                |  Additional arguments for queue declaration.
 
             - routing_key(str)("")
-               |  The routing key to use in case of a "topic" exchange.
-               | When the exchange is type "direct" the routing key is always equal
-               | to the <queue> value.
+               |  The routing key to use when submitting messages.
 
-            - prefetch_count(int)(1)
-               |  Prefetch count value to consume messages from queue.
-
-            - no_ack(bool)(false)
-               |  Override acknowledgement requirement.
+            - delivery_mode(int)(1)
+               |  Sets the delivery mode of the messages.
 
 
         Queues:
 
-            - outbox
-               |  Messages coming from the defined broker.
-
-            - ack
-               |  Messages to acknowledge (requires the delivery_tag)
-
-            - cancel
-               |  Cancels a message acknowledgement (requires the delivery_tag)
+            - inbox
+               | Messages going to the defined broker.
 
