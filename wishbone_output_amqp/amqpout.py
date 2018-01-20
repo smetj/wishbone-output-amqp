@@ -34,7 +34,7 @@ from gevent.event import Event
 
 class AMQPOut(OutputModule):
     '''
-    Submits messages to AMQP.
+    Submits messages to an AMQP service.
 
     Submits messages to an AMQP message broker.
 
