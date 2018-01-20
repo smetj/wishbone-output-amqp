@@ -27,11 +27,11 @@ from setuptools.command.test import test as TestCommand
 import sys
 
 PROJECT = 'wishbone_output_amqp'
-VERSION = '1.1.1'
+VERSION = '3.0.0'
 
 install_requires = [
-    'wishbone>=2.1.1',
-    'amqp>=2.0.0',
+    'wishbone>=3.0.0',
+    'amqp',
 ]
 
 try:
@@ -53,11 +53,12 @@ class PyTest(TestCommand):
         errcode = pytest.main(self.test_args)
         sys.exit(errcode)
 
+
 setup(
     name=PROJECT,
     version=VERSION,
 
-    description='A Wishbone output module to produces messages to AMQP.',
+    description='A Wishbone module to submit messages to an AMQP service.',
     long_description=long_description,
 
     author='Jelle Smet',
@@ -68,7 +69,7 @@ setup(
     classifiers=['Development Status :: 5 - Production/Stable',
                  'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
                  'Programming Language :: Python',
-                 'Programming Language :: Python :: 2.7',
+                 'Programming Language :: Python :: 3',
                  'Programming Language :: Python :: Implementation :: PyPy',
                  'Intended Audience :: Developers',
                  'Intended Audience :: System Administrators',
@@ -86,7 +87,7 @@ setup(
     packages=find_packages(),
     zip_safe=False,
     entry_points={
-        'wishbone.output': [
+        'wishbone_contrib.module.output': [
             'amqp = wishbone_output_amqp:AMQPOut'
         ]
     }

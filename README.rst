@@ -1,24 +1,21 @@
 ::
-
               __       __    __
     .--.--.--|__.-----|  |--|  |--.-----.-----.-----.
     |  |  |  |  |__ --|     |  _  |  _  |     |  -__|
     |________|__|_____|__|__|_____|_____|__|__|_____|
-                                       version 2.1.2
-
-    Build composable event pipeline servers with minimal effort.
+                                       version 3.0.0
 
 
+    ===================================
+    wishbone_contrib.module.output.amqp
+    ===================================
 
-    ====================
-    wishbone.output.amqp
-    ====================
+    Version: 3.0.0
 
-    Version: 1.0.0
+    Submits messages to an AMQP service.
+    ------------------------------------
 
-    Produces messages to AMQP.
-    --------------------------
-
+        Submits messages to an AMQP service.
 
         Submits messages to an AMQP message broker.
 
@@ -32,9 +29,13 @@
 
         Parameters:
 
-            - selection(str)("@data")
+            - selection(str)("data")
                |  The part of the event to submit externally.
                |  Use an empty string to refer to the complete event.
+
+            - payload(str)(None)
+               |  The string to submit.
+               |  If defined takes precedence over `selection`.
 
             - host(str)("localhost")
                |  The host broker to connect to.
