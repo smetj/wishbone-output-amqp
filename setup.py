@@ -58,7 +58,7 @@ setup(
     name=PROJECT,
     version=VERSION,
 
-    description='A Wishbone output module to produces messages to AMQP.',
+    description='A Wishbone module to submit messages to an AMQP service.',
     long_description=long_description,
 
     author='Jelle Smet',
