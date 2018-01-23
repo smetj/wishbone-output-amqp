@@ -4,7 +4,7 @@
     .--.--.--|__.-----|  |--|  |--.-----.-----.-----.
     |  |  |  |  |__ --|     |  _  |  _  |     |  -__|
     |________|__|_____|__|__|_____|_____|__|__|_____|
-                                       version 2.1.2
+                                       version 2.3.3
 
     Build composable event pipeline servers with minimal effort.
 
@@ -14,7 +14,7 @@
     wishbone.output.amqp
     ====================
 
-    Version: 1.0.0
+    Version: 1.3.0
 
     Produces messages to AMQP.
     --------------------------
@@ -96,6 +96,9 @@
 
             - delivery_mode(int)(1)
                |  Sets the delivery mode of the messages.
+
+            - heartbeat(int)(30)
+               |  Sets the heartbeat interval.
 
 
         Queues:
