@@ -52,6 +52,9 @@
             - password(str)("guest")
                |  The password to authenticate.
 
+            - ssl(bool)(False)
+               |  If True expects SSL
+
             - exchange(str)("")
                |  The exchange to declare.
 

@@ -22,8 +22,7 @@
 #
 #
 
-from gevent import monkey
-monkey.patch_socket()
+from gevent import monkey; monkey.patch_all()
 from wishbone.module import OutputModule
 from amqp.connection import Connection
 from amqp import basic_message
@@ -56,11 +55,8 @@ class AMQPOut(OutputModule):
            |  The string to submit.
            |  If defined takes precedence over `selection`.
 
-        - host(str)("localhost")
+        - host(str)("localhost:5672")
            |  The host broker to connect to.
-
-        - port(int)(5672)
-           |  The port to connect to.
 
         - vhost(str)("/")
            |  The virtual host to connect to.
@@ -70,6 +66,9 @@ class AMQPOut(OutputModule):
 
         - password(str)("guest")
            |  The password to authenticate.
+
+        - ssl(bool)(False)
+           |  If True expects SSL
 
         - exchange(str)("")
            |  The exchange to declare.
@@ -125,7 +124,7 @@ class AMQPOut(OutputModule):
     '''
 
     def __init__(self, actor_config, selection="data", payload=None,
-                 host="localhost", port=5672, vhost="/", user="guest", password="guest",
+                 host="localhost:5672", vhost="/", user="guest", password="guest", ssl=False,
                  exchange="wishbone", exchange_type="direct", exchange_durable=False, exchange_auto_delete=True, exchange_passive=False,
                  exchange_arguments={},
                  queue="wishbone", queue_durable=False, queue_exclusive=False, queue_auto_delete=True, queue_declare=True,
@@ -190,11 +189,12 @@ class AMQPOut(OutputModule):
             try:
                 self.connection = Connection(
                     host=self.kwargs.host,
-                    port=self.kwargs.port,
                     virtual_host=self.kwargs.vhost,
                     userid=self.kwargs.user,
-                    password=self.kwargs.password
+                    password=self.kwargs.password,
+                    ssl=self.kwargs.ssl
                 )
+                print("x"*100, self.connection.transport.socket)
                 self.connection.connect()
                 self.channel = self.connection.channel()
 
