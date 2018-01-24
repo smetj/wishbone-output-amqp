@@ -192,7 +192,8 @@ class AMQPOut(OutputModule):
                     virtual_host=self.kwargs.vhost,
                     userid=self.kwargs.user,
                     password=self.kwargs.password,
-                    ssl=self.kwargs.ssl
+                    ssl=self.kwargs.ssl,
+                    connect_timeout=5
                 )
                 self.connection.connect()
                 self.channel = self.connection.channel()
