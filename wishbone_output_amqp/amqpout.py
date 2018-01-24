@@ -194,7 +194,6 @@ class AMQPOut(OutputModule):
                     password=self.kwargs.password,
                     ssl=self.kwargs.ssl
                 )
-                print("x"*100, self.connection.transport.socket)
                 self.connection.connect()
                 self.channel = self.connection.channel()
 
