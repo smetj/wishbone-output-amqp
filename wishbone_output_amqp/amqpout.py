@@ -24,6 +24,7 @@
 
 from gevent import monkey; monkey.patch_all()
 from wishbone.module import OutputModule
+from wishbone.protocol.encode.dummy import Dummy
 from amqp.connection import Connection
 from amqp import basic_message
 from gevent import sleep
@@ -144,6 +145,7 @@ class AMQPOut(OutputModule):
         self.do_consume.clear()
 
         self.channel = None
+        self.encode = Dummy().handler
 
     def preHook(self):
         self._queue_arguments = dict(self.kwargs.queue_arguments)
@@ -165,6 +167,8 @@ class AMQPOut(OutputModule):
                     )
             else:
                 data = event.kwargs.payload
+
+            data = self.encode(data)
 
             message = basic_message.Message(
                 body=data,
