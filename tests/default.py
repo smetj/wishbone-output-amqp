@@ -172,7 +172,7 @@ def test_module_amqp_default_queue_auto_delete():
 def test_module_amqp_submit_message():
 
     actor_config = ActorConfig('amqp', 100, 1, {}, "", disable_exception_handling=True)
-    amqp = AMQPOut(actor_config, exchange="wishbone_submit", queue="wishbone_submit")
+    amqp = AMQPOut(actor_config, exchange="wishbone_submit_message", queue="wishbone_submit_message", exchange_durable=False, queue_durable=False)
 
     amqp.pool.queue.inbox.disableFallThrough()
     amqp.start()
@@ -184,7 +184,7 @@ def test_module_amqp_submit_message():
     conn = Connection()
     conn.connect()
     channel = conn.channel()
-    message = channel.basic_get("wishbone_submit")
+    message = channel.basic_get("wishbone_submit_message")
     channel.close()
     conn.close()
     sleep(1)
@@ -198,7 +198,7 @@ def test_module_amqp_submit_message_encode():
     protocol = c.getComponentByName("wishbone.protocol.encode.json")()
 
     actor_config = ActorConfig('amqp', 100, 1, {}, "", protocol=protocol, disable_exception_handling=True)
-    amqp = AMQPOut(actor_config, exchange="wishbone_submit", queue="wishbone_submit")
+    amqp = AMQPOut(actor_config, exchange="wishbone_submit_encode", queue="wishbone_submit_encode", exchange_durable=False, queue_durable=False)
 
     amqp.pool.queue.inbox.disableFallThrough()
     amqp.start()
@@ -210,7 +210,7 @@ def test_module_amqp_submit_message_encode():
     conn = Connection()
     conn.connect()
     channel = conn.channel()
-    message = channel.basic_get("wishbone_submit")
+    message = channel.basic_get("wishbone_submit_encode")
     channel.close()
     conn.close()
     sleep(1)
