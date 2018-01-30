@@ -35,6 +35,7 @@ from gevent import sleep
 import requests
 from requests.auth import HTTPBasicAuth
 from amqp import Connection, basic_message
+from wishbone.componentmanager import ComponentManager
 
 
 def test_module_amqp_create_exchange_default():
@@ -189,3 +190,29 @@ def test_module_amqp_submit_message():
     sleep(1)
     amqp.stop()
     assert message.body == "test"
+
+
+def test_module_amqp_submit_message_encode():
+
+    c = ComponentManager()
+    protocol = c.getComponentByName("wishbone.protocol.encode.json")()
+
+    actor_config = ActorConfig('amqp', 100, 1, {}, "", protocol=protocol, disable_exception_handling=True)
+    amqp = AMQPOut(actor_config, exchange="wishbone_submit", queue="wishbone_submit")
+
+    amqp.pool.queue.inbox.disableFallThrough()
+    amqp.start()
+
+    event = Event({"one": 1})
+    amqp.submit(event, "inbox")
+
+    sleep(1)
+    conn = Connection()
+    conn.connect()
+    channel = conn.channel()
+    message = channel.basic_get("wishbone_submit")
+    channel.close()
+    conn.close()
+    sleep(1)
+    amqp.stop()
+    assert message.body == '{"one": 1}'
