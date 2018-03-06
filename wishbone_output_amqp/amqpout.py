@@ -22,19 +22,17 @@
 #
 #
 
-from gevent import monkey
-monkey.patch_socket()
+from gevent import monkey; monkey.patch_all()
 from wishbone.module import OutputModule
 from amqp.connection import Connection
 from amqp import basic_message
 from gevent import sleep
-from wishbone.event import extractBulkItemValues
 from gevent.event import Event
 
 
 class AMQPOut(OutputModule):
     '''
-    Submits messages to an AMQP service.
+    Submits messages to AMQP.
 
     Submits messages to an AMQP message broker.
 
@@ -44,32 +42,10 @@ class AMQPOut(OutputModule):
     If <exchange> and <queue> are provided, they will both be created and
     bound during initialisation.
 
-    <exchange> and <queue> can be event lookup values.
+    Parameters::
 
-    Parameters:
-
-        - selection(str)("data")
-           |  The part of the event to submit externally.
-           |  Use an empty string to refer to the complete event.
-
-        - payload(str)(None)
-           |  The string to submit.
-           |  If defined takes precedence over `selection`.
-
-        - host(str)("localhost")
-           |  The host broker to connect to.
-
-        - port(int)(5672)
-           |  The port to connect to.
-
-        - vhost(str)("/")
-           |  The virtual host to connect to.
-
-        - user(str)("guest")
-           |  The username to authenticate.
-
-        - password(str)("guest")
-           |  The password to authenticate.
+        - delivery_mode(int)(1)
+           |  Sets the delivery mode of the messages.
 
         - exchange(str)("")
            |  The exchange to declare.
@@ -90,17 +66,27 @@ class AMQPOut(OutputModule):
         - exchange_arguments(dict)({})
            |  Additional arguments for exchange declaration.
 
+        - host(str)("localhost:5672")
+           |  The host broker to connect to.
+
+        - native_event(bool)(False)
+           |  Whether to expect incoming events to be native Wishbone events
+
+        - password(str)("guest")
+           |  The password to authenticate.
+
+        - payload(str)(None)
+           |  The string to submit.
+           |  If defined takes precedence over `selection`.
+
         - queue(str)("wishbone")
            |  The queue to declare and bind to <exchange>. This will also the
            |  the destination queue of the submitted messages unless
            |  <routing_key> is set to another value and <exchange_type> is
            |  "topic".
 
-        - queue_durable(bool)(false)
-           |  Declare a durable queue.
-
-        - queue_exclusive(bool)(false)
-           |  Declare an exclusive queue.
+        - queue_arguments(dict)({})
+           |  Additional arguments for queue declaration.
 
         - queue_auto_delete(bool)(true)
            |  Whether to autodelete the queue.
@@ -108,24 +94,36 @@ class AMQPOut(OutputModule):
         - queue_declare(bool)(true)
            |  Whether to actually declare the queue.
 
-        - queue_arguments(dict)({})
-           |  Additional arguments for queue declaration.
+        - queue_durable(bool)(false)
+           |  Declare a durable queue.
+
+        - queue_exclusive(bool)(false)
+           |  Declare an exclusive queue.
 
         - routing_key(str)("")
            |  The routing key to use when submitting messages.
 
-        - delivery_mode(int)(1)
-           |  Sets the delivery mode of the messages.
+        - selection(str)("data")
+           |  The part of the event to submit externally.
+
+        - ssl(bool)(False)
+           |  If True expects SSL
+
+        - user(str)("guest")
+           |  The username to authenticate.
+
+        - vhost(str)("/")
+           |  The virtual host to connect to.
 
 
-    Queues:
+    Queues::
 
         - inbox
            | Messages going to the defined broker.
     '''
 
-    def __init__(self, actor_config, selection="data", payload=None,
-                 host="localhost", port=5672, vhost="/", user="guest", password="guest",
+    def __init__(self, actor_config, native_event=False, selection="data", payload=None,
+                 host="localhost:5672", vhost="/", user="guest", password="guest", ssl=False,
                  exchange="wishbone", exchange_type="direct", exchange_durable=False, exchange_auto_delete=True, exchange_passive=False,
                  exchange_arguments={},
                  queue="wishbone", queue_durable=False, queue_exclusive=False, queue_auto_delete=True, queue_declare=True,
@@ -133,7 +131,6 @@ class AMQPOut(OutputModule):
                  routing_key="", delivery_mode=1):
 
         OutputModule.__init__(self, actor_config)
-        self.setEncoder("wishbone.protocol.encode.dummy")
 
         self.pool.createQueue("inbox")
         self.registerConsumer(self.consume, "inbox")
@@ -157,16 +154,8 @@ class AMQPOut(OutputModule):
         if self.channel is None:
             self.logging.error("Failed to submit message. Initial connection not established yet.")
         else:
-            if event.kwargs.payload is None:
-                if event.isBulk():
-                    data = "\n".join([str(item) for item in extractBulkItemValues(event, self.kwargs.selection)])
-                else:
-                    data = event.get(
-                        event.kwargs.selection
-                    )
-            else:
-                data = event.kwargs.payload
-
+            data = self.getDataToSubmit(event)
+            data = self.encode(data)
             message = basic_message.Message(
                 body=data,
                 delivery_mode=self.kwargs.delivery_mode
@@ -190,10 +179,11 @@ class AMQPOut(OutputModule):
             try:
                 self.connection = Connection(
                     host=self.kwargs.host,
-                    port=self.kwargs.port,
                     virtual_host=self.kwargs.vhost,
                     userid=self.kwargs.user,
-                    password=self.kwargs.password
+                    password=self.kwargs.password,
+                    ssl=self.kwargs.ssl,
+                    connect_timeout=5
                 )
                 self.connection.connect()
                 self.channel = self.connection.channel()
