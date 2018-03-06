@@ -24,11 +24,9 @@
 
 from gevent import monkey; monkey.patch_all()
 from wishbone.module import OutputModule
-from wishbone.protocol.encode.dummy import Dummy
 from amqp.connection import Connection
 from amqp import basic_message
 from gevent import sleep
-from wishbone.event import extractBulkItemValues
 from gevent.event import Event
 
 
@@ -124,7 +122,7 @@ class AMQPOut(OutputModule):
            | Messages going to the defined broker.
     '''
 
-    def __init__(self, actor_config, selection="data", payload=None,
+    def __init__(self, actor_config, native_event=False, selection="data", payload=None,
                  host="localhost:5672", vhost="/", user="guest", password="guest", ssl=False,
                  exchange="wishbone", exchange_type="direct", exchange_durable=False, exchange_auto_delete=True, exchange_passive=False,
                  exchange_arguments={},
@@ -133,7 +131,6 @@ class AMQPOut(OutputModule):
                  routing_key="", delivery_mode=1):
 
         OutputModule.__init__(self, actor_config)
-        self.setEncoder("wishbone.protocol.encode.dummy")
 
         self.pool.createQueue("inbox")
         self.registerConsumer(self.consume, "inbox")
@@ -145,7 +142,6 @@ class AMQPOut(OutputModule):
         self.do_consume.clear()
 
         self.channel = None
-        self.encode = Dummy().handler
 
     def preHook(self):
         self._queue_arguments = dict(self.kwargs.queue_arguments)
@@ -158,18 +154,8 @@ class AMQPOut(OutputModule):
         if self.channel is None:
             self.logging.error("Failed to submit message. Initial connection not established yet.")
         else:
-            if event.kwargs.payload is None:
-                if event.isBulk():
-                    data = "\n".join([str(item) for item in extractBulkItemValues(event, self.kwargs.selection)])
-                else:
-                    data = event.get(
-                        event.kwargs.selection
-                    )
-            else:
-                data = event.kwargs.payload
-
+            data = self.getDataToSubmit(event)
             data = self.encode(data)
-
             message = basic_message.Message(
                 body=data,
                 delivery_mode=self.kwargs.delivery_mode
