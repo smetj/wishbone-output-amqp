@@ -32,7 +32,7 @@ from gevent.event import Event
 
 class AMQPOut(OutputModule):
     '''
-    Submits messages to an AMQP service.
+    Submits messages to AMQP.
 
     Submits messages to an AMQP message broker.
 
@@ -42,32 +42,10 @@ class AMQPOut(OutputModule):
     If <exchange> and <queue> are provided, they will both be created and
     bound during initialisation.
 
-    <exchange> and <queue> can be event lookup values.
+    Parameters::
 
-    Parameters:
-
-        - selection(str)("data")
-           |  The part of the event to submit externally.
-           |  Use an empty string to refer to the complete event.
-
-        - payload(str)(None)
-           |  The string to submit.
-           |  If defined takes precedence over `selection`.
-
-        - host(str)("localhost:5672")
-           |  The host broker to connect to.
-
-        - vhost(str)("/")
-           |  The virtual host to connect to.
-
-        - user(str)("guest")
-           |  The username to authenticate.
-
-        - password(str)("guest")
-           |  The password to authenticate.
-
-        - ssl(bool)(False)
-           |  If True expects SSL
+        - delivery_mode(int)(1)
+           |  Sets the delivery mode of the messages.
 
         - exchange(str)("")
            |  The exchange to declare.
@@ -88,17 +66,27 @@ class AMQPOut(OutputModule):
         - exchange_arguments(dict)({})
            |  Additional arguments for exchange declaration.
 
+        - host(str)("localhost:5672")
+           |  The host broker to connect to.
+
+        - native_event(bool)(False)
+           |  Whether to expect incoming events to be native Wishbone events
+
+        - password(str)("guest")
+           |  The password to authenticate.
+
+        - payload(str)(None)
+           |  The string to submit.
+           |  If defined takes precedence over `selection`.
+
         - queue(str)("wishbone")
            |  The queue to declare and bind to <exchange>. This will also the
            |  the destination queue of the submitted messages unless
            |  <routing_key> is set to another value and <exchange_type> is
            |  "topic".
 
-        - queue_durable(bool)(false)
-           |  Declare a durable queue.
-
-        - queue_exclusive(bool)(false)
-           |  Declare an exclusive queue.
+        - queue_arguments(dict)({})
+           |  Additional arguments for queue declaration.
 
         - queue_auto_delete(bool)(true)
            |  Whether to autodelete the queue.
@@ -106,17 +94,29 @@ class AMQPOut(OutputModule):
         - queue_declare(bool)(true)
            |  Whether to actually declare the queue.
 
-        - queue_arguments(dict)({})
-           |  Additional arguments for queue declaration.
+        - queue_durable(bool)(false)
+           |  Declare a durable queue.
+
+        - queue_exclusive(bool)(false)
+           |  Declare an exclusive queue.
 
         - routing_key(str)("")
            |  The routing key to use when submitting messages.
 
-        - delivery_mode(int)(1)
-           |  Sets the delivery mode of the messages.
+        - selection(str)("data")
+           |  The part of the event to submit externally.
+
+        - ssl(bool)(False)
+           |  If True expects SSL
+
+        - user(str)("guest")
+           |  The username to authenticate.
+
+        - vhost(str)("/")
+           |  The virtual host to connect to.
 
 
-    Queues:
+    Queues::
 
         - inbox
            | Messages going to the defined broker.
