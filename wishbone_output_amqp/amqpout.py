@@ -66,6 +66,10 @@ class AMQPOut(OutputModule):
         - exchange_arguments(dict)({})
            |  Additional arguments for exchange declaration.
 
+        - heartbeat(int)(0)
+            | Enable AMQP heartbeat. The value is the interval in seconds.
+            | 0 disables heartbeat support.
+
         - host(str)("localhost:5672")
            |  The host broker to connect to.
 
@@ -123,7 +127,7 @@ class AMQPOut(OutputModule):
     '''
 
     def __init__(self, actor_config, native_event=False, selection="data", payload=None,
-                 host="localhost:5672", vhost="/", user="guest", password="guest", ssl=False,
+                 host="localhost:5672", vhost="/", user="guest", password="guest", ssl=False, heartbeat=0,
                  exchange="wishbone", exchange_type="direct", exchange_durable=False, exchange_auto_delete=True, exchange_passive=False,
                  exchange_arguments={},
                  queue="wishbone", queue_durable=False, queue_exclusive=False, queue_auto_delete=True, queue_declare=True,
@@ -142,6 +146,15 @@ class AMQPOut(OutputModule):
         self.do_consume.clear()
 
         self.channel = None
+
+    def heartbeat(self):
+
+        while self.loop():
+            sleep(self.kwargs.heartbeat)
+            try:
+                self.connection.send_heartbeat()
+            except Exception as err:
+                self.logging.error("Failed to send heartbeat. Reason: %s" % (err))
 
     def preHook(self):
         self._queue_arguments = dict(self.kwargs.queue_arguments)
@@ -179,6 +192,7 @@ class AMQPOut(OutputModule):
             try:
                 self.connection = Connection(
                     host=self.kwargs.host,
+                    heartbeat=self.kwargs.heartbeat,
                     virtual_host=self.kwargs.vhost,
                     userid=self.kwargs.user,
                     password=self.kwargs.password,
@@ -224,6 +238,9 @@ class AMQPOut(OutputModule):
             else:
                 self.do_consume.set()
                 self.connect.clear()
+                if self.kwargs.heartbeat > 0:
+                    self.logging.info("Sending heartbeat every %s seconds." % (self.kwargs.heartbeat))
+                    self.sendToBackground(self.heartbeat)
 
     def postHook(self):
         try:
