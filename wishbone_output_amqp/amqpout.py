@@ -147,12 +147,15 @@ class AMQPOut(OutputModule):
 
         self.channel = None
 
+        self.connected = False
+
     def heartbeat(self):
 
         while self.loop():
             sleep(self.kwargs.heartbeat)
             try:
-                self.connection.send_heartbeat()
+                if self.connected:
+                    self.connection.send_heartbeat()
             except Exception as err:
                 self.logging.error("Failed to send heartbeat. Reason: %s" % (err))
 
@@ -182,9 +185,14 @@ class AMQPOut(OutputModule):
                 )
             except Exception as err:
                 self.logging.error("Failed to submit event to broker. Reason: %s" % (err))
+                self.connected = False
                 self.connect.set()
 
     def setupConnectivity(self):
+
+        if self.kwargs.heartbeat > 0:
+            self.logging.info("Sending heartbeat every %s seconds." % (self.kwargs.heartbeat))
+            self.sendToBackground(self.heartbeat)
 
         while self.loop():
             self.connect.wait()
@@ -238,9 +246,8 @@ class AMQPOut(OutputModule):
             else:
                 self.do_consume.set()
                 self.connect.clear()
-                if self.kwargs.heartbeat > 0:
-                    self.logging.info("Sending heartbeat every %s seconds." % (self.kwargs.heartbeat))
-                    self.sendToBackground(self.heartbeat)
+                self.connected = True
+
 
     def postHook(self):
         try:
