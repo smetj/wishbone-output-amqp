@@ -1,107 +1,109 @@
 ::
 
-            __       __    __
-  .--.--.--|__.-----|  |--|  |--.-----.-----.-----.
-  |  |  |  |  |__ --|     |  _  |  _  |     |  -__|
-  |________|__|_____|__|__|_____|_____|__|__|_____|
-                                     version 3.0.4
+              __       __    __
+    .--.--.--|__.-----|  |--|  |--.-----.-----.-----.
+    |  |  |  |  |__ --|     |  _  |  _  |     |  -__|
+    |________|__|_____|__|__|_____|_____|__|__|_____|
 
 
-  ===================================
-  wishbone_contrib.module.output.amqp
-  ===================================
+    ===================================
+    wishbone_contrib.module.output.amqp
+    ===================================
 
-  Version: 3.0.0
+    Version: 3.0.2
 
-  Submits messages to AMQP.
-  -------------------------
+    Submits messages to AMQP.
+    -------------------------
 
-      Submits messages to AMQP.
+        Submits messages to AMQP.
 
-      Submits messages to an AMQP message broker.
+        Submits messages to an AMQP message broker.
 
-      If <exchange> is not provided, no exchange will be created during initialisation.
-      If <queue> is not provided, queue will be created during initialisation
+        If <exchange> is not provided, no exchange will be created during initialisation.
+        If <queue> is not provided, queue will be created during initialisation
 
-      If <exchange> and <queue> are provided, they will both be created and
-      bound during initialisation.
+        If <exchange> and <queue> are provided, they will both be created and
+        bound during initialisation.
 
-      Parameters::
+        Parameters::
 
-          - delivery_mode(int)(1)
-             |  Sets the delivery mode of the messages.
+            - delivery_mode(int)(1)
+               |  Sets the delivery mode of the messages.
 
-          - exchange(str)("")
-             |  The exchange to declare.
+            - exchange(str)("")
+               |  The exchange to declare.
 
-          - exchange_type(str)("direct")
-             |  The exchange type to create. (direct, topic, fanout)
+            - exchange_type(str)("direct")
+               |  The exchange type to create. (direct, topic, fanout)
 
-          - exchange_durable(bool)(false)
-             |  Declare a durable exchange.
+            - exchange_durable(bool)(false)
+               |  Declare a durable exchange.
 
-          - exchange_auto_delete(bool)(true)
-             |  If set, the exchange is deleted when all queues have finished using it.
+            - exchange_auto_delete(bool)(true)
+               |  If set, the exchange is deleted when all queues have finished using it.
 
-          - exchange_passive(bool)(false)
-             |  If set, the server will not create the exchange. The client can use
-             |  this to check whether an exchange exists without modifying the server state.
+            - exchange_passive(bool)(false)
+               |  If set, the server will not create the exchange. The client can use
+               |  this to check whether an exchange exists without modifying the server state.
 
-          - exchange_arguments(dict)({})
-             |  Additional arguments for exchange declaration.
+            - exchange_arguments(dict)({})
+               |  Additional arguments for exchange declaration.
 
-          - host(str)("localhost:5672")
-             |  The host broker to connect to.
+            - heartbeat(int)(0)
+                | Enable AMQP heartbeat. The value is the interval in seconds.
+                | 0 disables heartbeat support.
 
-          - native_event(bool)(False)
-             |  Whether to expect incoming events to be native Wishbone events
+            - host(str)("localhost:5672")
+               |  The host broker to connect to.
 
-          - password(str)("guest")
-             |  The password to authenticate.
+            - native_event(bool)(False)
+               |  Whether to expect incoming events to be native Wishbone events
 
-          - payload(str)(None)
-             |  The string to submit.
-             |  If defined takes precedence over `selection`.
+            - password(str)("guest")
+               |  The password to authenticate.
 
-          - queue(str)("wishbone")
-             |  The queue to declare and bind to <exchange>. This will also the
-             |  the destination queue of the submitted messages unless
-             |  <routing_key> is set to another value and <exchange_type> is
-             |  "topic".
+            - payload(str)(None)
+               |  The string to submit.
+               |  If defined takes precedence over `selection`.
 
-          - queue_arguments(dict)({})
-             |  Additional arguments for queue declaration.
+            - queue(str)("wishbone")
+               |  The queue to declare and bind to <exchange>. This will also the
+               |  the destination queue of the submitted messages unless
+               |  <routing_key> is set to another value and <exchange_type> is
+               |  "topic".
 
-          - queue_auto_delete(bool)(true)
-             |  Whether to autodelete the queue.
+            - queue_arguments(dict)({})
+               |  Additional arguments for queue declaration.
 
-          - queue_declare(bool)(true)
-             |  Whether to actually declare the queue.
+            - queue_auto_delete(bool)(true)
+               |  Whether to autodelete the queue.
 
-          - queue_durable(bool)(false)
-             |  Declare a durable queue.
+            - queue_declare(bool)(true)
+               |  Whether to actually declare the queue.
 
-          - queue_exclusive(bool)(false)
-             |  Declare an exclusive queue.
+            - queue_durable(bool)(false)
+               |  Declare a durable queue.
 
-          - routing_key(str)("")
-             |  The routing key to use when submitting messages.
+            - queue_exclusive(bool)(false)
+               |  Declare an exclusive queue.
 
-          - selection(str)("data")
-             |  The part of the event to submit externally.
+            - routing_key(str)("")
+               |  The routing key to use when submitting messages.
 
-          - ssl(bool)(False)
-             |  If True expects SSL
+            - selection(str)("data")
+               |  The part of the event to submit externally.
 
-          - user(str)("guest")
-             |  The username to authenticate.
+            - ssl(bool)(False)
+               |  If True expects SSL
 
-          - vhost(str)("/")
-             |  The virtual host to connect to.
+            - user(str)("guest")
+               |  The username to authenticate.
+
+            - vhost(str)("/")
+               |  The virtual host to connect to.
 
 
-      Queues::
+        Queues::
 
-          - inbox
-             | Messages going to the defined broker.
-
+            - inbox
+               | Messages going to the defined broker.
