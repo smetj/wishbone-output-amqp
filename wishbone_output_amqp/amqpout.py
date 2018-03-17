@@ -73,8 +73,11 @@ class AMQPOut(OutputModule):
         - host(str)("localhost:5672")
            |  The host broker to connect to.
 
-        - native_event(bool)(False)
+        - native_events(bool)(False)
            |  Whether to expect incoming events to be native Wishbone events
+
+        - parallel_streams(int)(1)
+           |  The number of outgoing parallel data streams.
 
         - password(str)("guest")
            |  The password to authenticate.
@@ -126,7 +129,7 @@ class AMQPOut(OutputModule):
            | Messages going to the defined broker.
     '''
 
-    def __init__(self, actor_config, native_event=False, selection="data", payload=None,
+    def __init__(self, actor_config, native_events=False, selection="data", payload=None, parallel_streams=1,
                  host="localhost:5672", vhost="/", user="guest", password="guest", ssl=False, heartbeat=0,
                  exchange="wishbone", exchange_type="direct", exchange_durable=False, exchange_auto_delete=True, exchange_passive=False,
                  exchange_arguments={},
@@ -247,7 +250,6 @@ class AMQPOut(OutputModule):
                 self.do_consume.set()
                 self.connect.clear()
                 self.connected = True
-
 
     def postHook(self):
         try:
