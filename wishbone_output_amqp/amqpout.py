@@ -74,7 +74,7 @@ class AMQPOut(OutputModule):
            |  The host broker to connect to.
 
         - native_events(bool)(False)
-           |  Whether to expect incoming events to be native Wishbone events
+           |  Outgoing events should be native Wishbone events
 
         - parallel_streams(int)(1)
            |  The number of outgoing parallel data streams.
