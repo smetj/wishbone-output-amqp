@@ -10,7 +10,7 @@
     wishbone_contrib.module.output.amqp
     ===================================
 
-    Version: 3.0.2
+    Version: 3.1.0
 
     Submits messages to AMQP.
     -------------------------
@@ -56,8 +56,11 @@
             - host(str)("localhost:5672")
                |  The host broker to connect to.
 
-            - native_event(bool)(False)
-               |  Whether to expect incoming events to be native Wishbone events
+            - native_events(bool)(False)
+               |  Outgoing events should be native Wishbone events
+
+            - parallel_streams(int)(1)
+               |  The number of outgoing parallel data streams.
 
             - password(str)("guest")
                |  The password to authenticate.
@@ -107,3 +110,4 @@
 
             - inbox
                | Messages going to the defined broker.
+
